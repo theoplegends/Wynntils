@@ -28,9 +28,13 @@ public class AbilityTreeContainerQueries {
     private static final int PREVIOUS_PAGE_SLOT = 57;
     private static final int NEXT_PAGE_SLOT = 59;
     private static final int MAX_PAGE_COUNT = 7;
+
+    private final float[] UNLOCKABLE_CUSTOMDATA = {51f, 19f, 23f, 35f, 31f, 27f};
+    private final float[] SELECTED_CUSTOMDATA = {52f, 20f, 24f, 36f, 32f, 28f};
+
     private int pageCount;
 
-    // Needed so the ability tree menu can open properly
+    // Callback needed so the ability tree menu can open properly
     public void updateParsedAbilityTree(java.util.function.Consumer<List<AbilityTreeNode>> callback) {
         if (Models.Container.getCurrentContainer() instanceof com.wynntils.models.containers.containers.AbilityTreeContainer) {
             McUtils.player().closeContainer();
@@ -59,8 +63,7 @@ public class AbilityTreeContainerQueries {
                         net.minecraft.world.item.component.CustomModelData cmd = itemStack.get(net.minecraft.core.component.DataComponents.CUSTOM_MODEL_DATA);
                         if (cmd == null || cmd.floats().isEmpty()) return false;
                         float customModelData = cmd.floats().get(0);
-                        float[] selected = {52f, 20f, 24f, 36f, 32f, 28f};
-                        for (float value : selected) {
+                        for (float value : SELECTED_CUSTOMDATA) {
                             if (customModelData == value) return true;
                         }
                         return false;
@@ -135,4 +138,9 @@ public class AbilityTreeContainerQueries {
 
         protected abstract void processPage(ContainerContent content, int page);
     }
+
+    public void unlockAbilities(List<AbilityTreeNode> nodesToUnlock) {
+        //help
+    }
+
 }
