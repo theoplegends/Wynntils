@@ -51,7 +51,6 @@ import com.wynntils.features.commands.AddCommandExpansionFeature;
 import com.wynntils.features.commands.CommandAliasesFeature;
 import com.wynntils.features.commands.CustomCommandKeybindsFeature;
 import com.wynntils.features.commands.FilterAdminCommandsFeature;
-import com.wynntils.features.debug.AbilityTreeDataDumpFeature;
 import com.wynntils.features.debug.ConnectionProgressFeature;
 import com.wynntils.features.debug.ContentBookDumpFeature;
 import com.wynntils.features.debug.FunctionDumpFeature;
@@ -195,7 +194,6 @@ public final class FeatureManager extends Manager {
 
     public void init() {
         // debug
-        registerFeature(new AbilityTreeDataDumpFeature());
         registerFeature(new ConnectionProgressFeature());
         registerFeature(new ContentBookDumpFeature());
         registerFeature(new FunctionDumpFeature());

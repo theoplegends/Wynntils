@@ -4,51 +4,72 @@
  */
 package com.wynntils.models.abilitytree;
 
-import com.google.common.collect.ImmutableMap;
 import com.wynntils.core.WynntilsMod;
 import com.wynntils.core.components.Managers;
 import com.wynntils.core.components.Models;
-import com.wynntils.core.text.StyledText;
 import com.wynntils.handlers.container.scriptedquery.QueryStep;
 import com.wynntils.handlers.container.scriptedquery.ScriptedContainerQuery;
 import com.wynntils.handlers.container.type.ContainerContent;
-import com.wynntils.models.abilitytree.parser.UnprocessedAbilityTreeInfo;
-import com.wynntils.models.abilitytree.type.AbilityTreeInfo;
-import com.wynntils.models.abilitytree.type.AbilityTreeNodeState;
-import com.wynntils.models.abilitytree.type.AbilityTreeSkillNode;
-import com.wynntils.models.abilitytree.type.ParsedAbilityTree;
 import com.wynntils.models.containers.ContainerModel;
 import com.wynntils.utils.mc.McUtils;
-import com.wynntils.utils.type.Pair;
 import com.wynntils.utils.wynn.InventoryUtils;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.function.Consumer;
+import net.minecraft.core.component.DataComponents;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
+import net.minecraft.world.item.PotionItem;
+import com.wynntils.models.abilitytree.type.AbilityTreeNode;
+import com.wynntils.models.abilitytree.type.AbilityTreeNodeState;
+import java.util.ArrayList;
+import java.util.List;
+import net.minecraft.world.item.component.CustomModelData;
 
 public class AbilityTreeContainerQueries {
     private static final int ABILITY_TREE_SLOT = 9;
     private static final int PREVIOUS_PAGE_SLOT = 57;
     private static final int NEXT_PAGE_SLOT = 59;
-    private static final StyledText NEXT_PAGE_ITEM_NAME = StyledText.fromString("§7Next Page");
-    private static final StyledText PREVIOUS_PAGE_ITEM_NAME = StyledText.fromString("§7Previous Page");
+    private static final int MAX_PAGE_COUNT = 7;
     private int pageCount;
 
-    public void dumpAbilityTree(Consumer<AbilityTreeInfo> supplier) {
-        queryAbilityTree(new AbilityTreeContainerQueries.AbilityPageDumper(supplier));
-    }
+    // Needed so the ability tree menu can open properly
+    public void updateParsedAbilityTree(java.util.function.Consumer<List<AbilityTreeNode>> callback) {
+        if (Models.Container.getCurrentContainer() instanceof com.wynntils.models.containers.containers.AbilityTreeContainer) {
+            McUtils.player().closeContainer();
+        }
 
-    public void updateParsedAbilityTree() {
-        McUtils.player().closeContainer();
-
-        // Wait for the container to close
         Managers.TickScheduler.scheduleNextTick(() -> queryAbilityTree(
-                new AbilityTreeContainerQueries.AbilityPageSoftProcessor(Models.AbilityTree::setCurrentAbilityTree)));
+                new AbilityTreeProcessor() {
+                    private final List<AbilityTreeNode> unlockedNodes = new ArrayList<>();
+
+                    @Override
+                    protected void processPage(ContainerContent content, int page) {
+                        java.util.List<ItemStack> items = content.items();
+                        for (int slot = 0; slot < items.size(); slot++) {
+                            ItemStack itemStack = items.get(slot);
+                            if (!(itemStack.getItem() instanceof PotionItem)) continue;
+                            if (isSelectedNode(itemStack)) {
+                                unlockedNodes.add(new AbilityTreeNode(AbilityTreeNodeState.UNLOCKED, slot, page));
+                            }
+                        }
+                        if (page == MAX_PAGE_COUNT) {
+                            callback.accept(unlockedNodes);
+                        }
+                    }
+
+                    private boolean isSelectedNode(ItemStack itemStack) {
+                        net.minecraft.world.item.component.CustomModelData cmd = itemStack.get(net.minecraft.core.component.DataComponents.CUSTOM_MODEL_DATA);
+                        if (cmd == null || cmd.floats().isEmpty()) return false;
+                        float customModelData = cmd.floats().get(0);
+                        float[] selected = {52f, 20f, 24f, 36f, 32f, 28f};
+                        for (float value : selected) {
+                            if (customModelData == value) return true;
+                        }
+                        return false;
+                    }
+                }
+        ));
     }
 
-    private void queryAbilityTree(AbilityTreeProcessor processor) {
+    public void queryAbilityTree(AbilityTreeProcessor processor) {
         ScriptedContainerQuery query = ScriptedContainerQuery.builder("Ability Tree Query")
                 .onError(msg -> {
                     WynntilsMod.warn("Problem querying Ability Tree: " + msg);
@@ -66,8 +87,10 @@ public class AbilityTreeContainerQueries {
                 // Go to first page, and save current page number
                 .execute(() -> this.pageCount = 0)
                 .repeat(
-                        c -> ScriptedContainerQuery.containerHasSlot(
-                                c, PREVIOUS_PAGE_SLOT, Items.STONE_AXE, PREVIOUS_PAGE_ITEM_NAME),
+                        c -> {
+                            ItemStack item = c.items().get(PREVIOUS_PAGE_SLOT);
+                            return item.getItem() == Items.POTION;
+                        },
                         QueryStep.clickOnSlot(PREVIOUS_PAGE_SLOT).processIncomingContainer(c -> {
                             // Count how many times this is done, and save this value.
                             // If we did not even enter here, we were already on first page.
@@ -79,8 +102,14 @@ public class AbilityTreeContainerQueries {
 
                 // Repeatedly go to next page, if any, and process it
                 .repeat(
-                        c -> ScriptedContainerQuery.containerHasSlot(
-                                c, NEXT_PAGE_SLOT, Items.STONE_AXE, NEXT_PAGE_ITEM_NAME),
+                        c -> {
+                            ItemStack item = c.items().get(NEXT_PAGE_SLOT);
+                            if (item.getItem() != Items.POTION) return false;
+                            String name = item.getHoverName().getString();
+                            CustomModelData cmd = item.get(DataComponents.CUSTOM_MODEL_DATA);
+                            int customModelData = (cmd != null && !cmd.floats().isEmpty()) ? Math.round(cmd.floats().get(0)) : -1;
+                            return name.equals("§7Next Page") && customModelData == 10;
+                        },
                         QueryStep.clickOnSlot(NEXT_PAGE_SLOT).processIncomingContainer(processor::processPage))
 
                 // Go back to initial page
@@ -88,7 +117,7 @@ public class AbilityTreeContainerQueries {
                         c -> {
                             // Go back as many pages as the original count was from the end
                             this.pageCount++;
-                            return this.pageCount != Models.AbilityTree.ABILITY_TREE_PAGES;
+                            return this.pageCount != MAX_PAGE_COUNT;
                         },
                         QueryStep.clickOnSlot(PREVIOUS_PAGE_SLOT))
                 .build();
@@ -96,7 +125,7 @@ public class AbilityTreeContainerQueries {
         query.executeQuery();
     }
 
-    private abstract static class AbilityTreeProcessor {
+    public abstract static class AbilityTreeProcessor {
         private int page = 1;
 
         protected void processPage(ContainerContent content) {
@@ -105,66 +134,5 @@ public class AbilityTreeContainerQueries {
         }
 
         protected abstract void processPage(ContainerContent content, int page);
-    }
-
-    /**
-     * Parses the whole ability tree and saves it to disk.
-     */
-    private static class AbilityPageDumper extends AbilityTreeProcessor {
-        private final Consumer<AbilityTreeInfo> supplier;
-        private final UnprocessedAbilityTreeInfo unprocessedTree = new UnprocessedAbilityTreeInfo();
-
-        protected AbilityPageDumper(Consumer<AbilityTreeInfo> supplier) {
-            this.supplier = supplier;
-        }
-
-        @Override
-        protected void processPage(ContainerContent content, int page) {
-            List<ItemStack> items = content.items();
-
-            for (int slot = 0; slot < items.size(); slot++) {
-                ItemStack itemStack = items.get(slot);
-
-                unprocessedTree.processItem(itemStack, page, slot, true);
-            }
-
-            if (page == Models.AbilityTree.ABILITY_TREE_PAGES) {
-                this.supplier.accept(unprocessedTree.getProcesssed());
-            }
-        }
-    }
-
-    /**
-     * Only parses nodes of an ability tree, and stores it.
-     */
-    private static class AbilityPageSoftProcessor extends AbilityTreeProcessor {
-        private final Map<AbilityTreeSkillNode, AbilityTreeNodeState> collectedInfo = new LinkedHashMap<>();
-        private final Consumer<ParsedAbilityTree> callback;
-
-        protected AbilityPageSoftProcessor(Consumer<ParsedAbilityTree> callback) {
-            this.callback = callback;
-        }
-
-        @Override
-        protected void processPage(ContainerContent content, int page) {
-            List<ItemStack> items = content.items();
-
-            for (int slot = 0; slot < items.size(); slot++) {
-                ItemStack itemStack = items.get(slot);
-                if (!Models.AbilityTree.ABILITY_TREE_PARSER.isNodeItem(itemStack, slot)) continue;
-
-                Pair<AbilityTreeSkillNode, AbilityTreeNodeState> parsedNode =
-                        Models.AbilityTree.ABILITY_TREE_PARSER.parseNodeFromItem(
-                                itemStack, page, slot, collectedInfo.size() + 1);
-
-                collectedInfo.put(parsedNode.key(), parsedNode.value());
-            }
-
-            boolean lastPage = page == Models.AbilityTree.ABILITY_TREE_PAGES;
-
-            if (lastPage) {
-                callback.accept(new ParsedAbilityTree(ImmutableMap.copyOf(collectedInfo)));
-            }
-        }
     }
 }
