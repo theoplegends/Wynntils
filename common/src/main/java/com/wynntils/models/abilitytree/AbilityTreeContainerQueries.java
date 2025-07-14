@@ -99,23 +99,22 @@ public class AbilityTreeContainerQueries {
                                 if (isUnlockableNode(itemStack, slot, page)) {
                                     // Unlock the node
 //                                    System.out.println(String.format("slot:%d, page:%d", slot, page));
-//                                    QueryStep.clickOnSlot(slot); // Or collect the click step to build into query
+//                                    QueryStep.clickOnSlot(slot);
 
 //                                    ContainerUtils.clickOnSlot(slot, content.containerId(), GLFW.GLFW_MOUSE_BUTTON_LEFT, content.items());
 //
+
+
 //                                    Int2ObjectMap<ItemStack> changedSlots = new Int2ObjectOpenHashMap<>();
 //                                    changedSlots.put(slot, new ItemStack(Items.AIR));
-//                                    McUtils.sendPacket(new ServerboundContainerClickPacket(McUtils.inventoryMenu().containerId, McUtils.inventoryMenu().getStateId(), slot, 0, ClickType.PICKUP, ItemStack.EMPTY, changedSlots));
+//                                    McUtils.sendPacket(new ServerboundContainerClickPacket(content.containerId(), McUtils.inventoryMenu().getStateId(), slot, 0, ClickType.PICKUP, ItemStack.EMPTY, changedSlots));
+
 
 //                                    McUtils.mc().gameMode.handleInventoryMouseClick(0, slot, 0, ClickType.PICKUP, McUtils.player());
 
-//                                    ContainerUtils.clickOnSlot(
-//                                            slot,
-//                                            content.containerId(),
-//                                            GLFW.GLFW_MOUSE_BUTTON_RIGHT,
-//                                            content.items());
+                                    System.out.println("Found matching item at slot:" + slot + " page:" + page);
 
-                                    unlockedAny = true;
+                                    unlockedAny = false;
                                     break; // break early to force a container refresh and get the new state
                                 }
                             }
@@ -124,8 +123,7 @@ public class AbilityTreeContainerQueries {
 
                     private boolean isUnlockableNode(ItemStack itemStack, int slot, int page) {
                         // Check if the node (slot, page) is in the target list
-                        boolean matchesTarget = nodes.stream()
-                                .anyMatch(n -> n.slot() == slot && n.page() == page);
+                        boolean matchesTarget = nodes.stream().anyMatch(n -> n.slot() == slot && n.page() == page);
                         if (!matchesTarget) return false;
 
                         // Check if the item has unlockable CMD
@@ -183,6 +181,9 @@ public class AbilityTreeContainerQueries {
                             return name.equals("§7Next Page") && customModelData == 10;
                         },
                         QueryStep.clickOnSlot(NEXT_PAGE_SLOT).processIncomingContainer(processor::processPage))
+
+                //process last page
+                .reprocess(processor::processPage)
 
                 // Go back to initial page
                 .repeat(
