@@ -10,18 +10,20 @@ import com.wynntils.core.components.Models;
 import com.wynntils.handlers.container.scriptedquery.QueryStep;
 import com.wynntils.handlers.container.scriptedquery.ScriptedContainerQuery;
 import com.wynntils.handlers.container.type.ContainerContent;
+import com.wynntils.models.abilitytree.type.AbilityTreeNode;
+import com.wynntils.models.abilitytree.type.AbilityTreeNodeState;
 import com.wynntils.models.containers.ContainerModel;
 import com.wynntils.utils.mc.McUtils;
+import com.wynntils.utils.wynn.ContainerUtils;
 import com.wynntils.utils.wynn.InventoryUtils;
 import net.minecraft.core.component.DataComponents;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.PotionItem;
-import com.wynntils.models.abilitytree.type.AbilityTreeNode;
-import com.wynntils.models.abilitytree.type.AbilityTreeNodeState;
+import net.minecraft.world.item.component.CustomModelData;
+
 import java.util.ArrayList;
 import java.util.List;
-import net.minecraft.world.item.component.CustomModelData;
 
 public class AbilityTreeContainerQueries {
     private static final int ABILITY_TREE_SLOT = 9;
@@ -29,16 +31,14 @@ public class AbilityTreeContainerQueries {
     private static final int NEXT_PAGE_SLOT = 59;
     private static final int MAX_PAGE_COUNT = 7;
 
-    private final float[] UNLOCKABLE_CUSTOMDATA = {51f, 19f, 23f, 35f, 31f, 27f};
+    private final float[] UNLOCKABLE_CUSTOMDATA = {51f, 19f, 23f, 35f, 31f, 27f}; // Im gonna hold your balls when I say this but whne the customdata is one of these its unlockable
     private final float[] SELECTED_CUSTOMDATA = {52f, 20f, 24f, 36f, 32f, 28f};
 
     private int pageCount;
 
     // Callback needed so the ability tree menu can open properly
-    public void updateParsedAbilityTree(java.util.function.Consumer<List<AbilityTreeNode>> callback) {
-        if (Models.Container.getCurrentContainer() instanceof com.wynntils.models.containers.containers.AbilityTreeContainer) {
-            McUtils.player().closeContainer();
-        }
+    public void saveAbilityTree(java.util.function.Consumer<List<AbilityTreeNode>> callback) {
+        ContainerUtils.closeBackgroundContainer();
 
         Managers.TickScheduler.scheduleNextTick(() -> queryAbilityTree(
                 new AbilityTreeProcessor() {
@@ -60,10 +60,56 @@ public class AbilityTreeContainerQueries {
                     }
 
                     private boolean isSelectedNode(ItemStack itemStack) {
-                        net.minecraft.world.item.component.CustomModelData cmd = itemStack.get(net.minecraft.core.component.DataComponents.CUSTOM_MODEL_DATA);
+                        CustomModelData cmd = itemStack.get(DataComponents.CUSTOM_MODEL_DATA);
                         if (cmd == null || cmd.floats().isEmpty()) return false;
                         float customModelData = cmd.floats().get(0);
                         for (float value : SELECTED_CUSTOMDATA) {
+                            if (customModelData == value) return true;
+                        }
+                        return false;
+                    }
+                }
+        ));
+    }
+
+    public void loadAbilityTree(List<AbilityTreeNode> nodes) {
+        ContainerUtils.closeBackgroundContainer();
+
+        Managers.TickScheduler.scheduleNextTick(() -> queryAbilityTree(
+                new AbilityTreeProcessor() {
+                    @Override
+                    protected void processPage(ContainerContent content, int page) {
+                        boolean unlockedAny;
+                        do {
+                            unlockedAny = false;
+
+                            List<ItemStack> items = content.items();
+                            for (int slot = 0; slot < items.size(); slot++) {
+                                ItemStack itemStack = items.get(slot);
+                                if (!(itemStack.getItem() instanceof PotionItem)) continue;
+
+                                if (isUnlockableNode(itemStack, slot, page)) {
+                                    // Unlock the node
+                                    QueryStep.clickOnSlot(slot); // Or collect the click step to build into query
+
+                                    unlockedAny = true;
+                                    break; // break early to force a container refresh and get the new state
+                                }
+                            }
+                        } while (unlockedAny);
+                    }
+
+                    private boolean isUnlockableNode(ItemStack itemStack, int slot, int page) {
+                        // Check if the node (slot, page) is in the target list
+                        boolean matchesTarget = nodes.stream()
+                                .anyMatch(n -> n.slot() == slot && n.page() == page);
+                        if (!matchesTarget) return false;
+
+                        // Check if the item has unlockable CMD
+                        CustomModelData cmd = itemStack.get(DataComponents.CUSTOM_MODEL_DATA);
+                        if (cmd == null || cmd.floats().isEmpty()) return false;
+                        float customModelData = cmd.floats().get(0);
+                        for (float value : UNLOCKABLE_CUSTOMDATA) {
                             if (customModelData == value) return true;
                         }
                         return false;
@@ -138,9 +184,4 @@ public class AbilityTreeContainerQueries {
 
         protected abstract void processPage(ContainerContent content, int page);
     }
-
-    public void unlockAbilities(List<AbilityTreeNode> nodesToUnlock) {
-        //help
-    }
-
 }

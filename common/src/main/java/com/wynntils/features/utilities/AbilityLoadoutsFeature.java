@@ -6,7 +6,9 @@ import com.wynntils.core.persisted.config.Category;
 import com.wynntils.core.persisted.config.ConfigCategory;
 import com.wynntils.mc.event.ScreenOpenedEvent;
 import com.wynntils.models.containers.containers.AbilityTreeContainer;
+import com.wynntils.screens.abilityloadouts.AbilityLoadoutsScreen;
 import com.wynntils.screens.base.widgets.WynntilsButton;
+import com.wynntils.utils.mc.McUtils;
 import net.minecraft.client.gui.screens.inventory.ContainerScreen;
 import net.minecraft.network.chat.Component;
 import net.neoforged.bus.api.SubscribeEvent;
@@ -37,11 +39,7 @@ public class AbilityLoadoutsFeature extends Feature {
 
         @Override
         public void onPress() {
-            com.wynntils.core.components.Models.AbilityTree.ABILITY_TREE_CONTAINER_QUERIES.updateParsedAbilityTree(tree -> {
-                com.wynntils.core.components.Managers.TickScheduler.scheduleLater(() -> {
-                    com.wynntils.utils.mc.McUtils.mc().setScreen(com.wynntils.screens.abilityloadouts.AbilityLoadoutsScreen.create());
-                }, 2); // 2 ticks after entering the ability tree GUI
-            });
+            McUtils.mc().setScreen(AbilityLoadoutsScreen.create());
         }
     }
 }

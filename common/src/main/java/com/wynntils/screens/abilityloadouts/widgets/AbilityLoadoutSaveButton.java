@@ -1,12 +1,15 @@
 package com.wynntils.screens.abilityloadouts.widgets;
 
 import com.wynntils.core.components.Models;
+import com.wynntils.models.abilitytree.AbilityTreeModel;
+import com.wynntils.models.abilitytree.type.AbilityTreeNode;
 import com.wynntils.screens.abilityloadouts.AbilityLoadoutsScreen;
 import com.wynntils.screens.base.widgets.WynntilsButton;
-import com.wynntils.models.abilitytree.type.AbilityTreeNode;
-import java.util.List;
+import com.wynntils.utils.type.Pair;
 import net.minecraft.ChatFormatting;
 import net.minecraft.network.chat.Component;
+
+import java.util.List;
 
 public class AbilityLoadoutSaveButton extends WynntilsButton {
     private final Component originalMessage;
@@ -34,11 +37,11 @@ public class AbilityLoadoutSaveButton extends WynntilsButton {
             buttonConfirm = true;
             this.setMessage(Component.translatable("Confirm").withStyle(ChatFormatting.RED));
         } else {
-            Models.AbilityTree.ABILITY_TREE_CONTAINER_QUERIES.updateParsedAbilityTree((List<AbilityTreeNode> nodes) -> {
-                Models.AbilityTree.getLoadouts().put(name, new com.wynntils.models.abilitytree.AbilityTreeModel.AbilityLoadout(nodes));
+            Models.AbilityTree.ABILITY_TREE_CONTAINER_QUERIES.saveAbilityTree((List<AbilityTreeNode> nodes) -> {
+                Models.AbilityTree.getLoadouts().put(name, new AbilityTreeModel.AbilityLoadout(nodes));
                 System.out.println("[AbilityLoadoutSaveButton] Saved loadout: " + name);
                 parent.populateLoadouts();
-                parent.setSelectedLoadout(com.wynntils.utils.type.Pair.of(name, Models.AbilityTree.getLoadouts().get(name)));
+                parent.setSelectedLoadout(Pair.of(name, Models.AbilityTree.getLoadouts().get(name)));
                 parent.saveNameInput.setTextBoxInput("");
                 parent.hasSaveNameConflict = false;
                 reset();
