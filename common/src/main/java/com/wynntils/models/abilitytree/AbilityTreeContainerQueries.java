@@ -4,6 +4,7 @@
  */
 package com.wynntils.models.abilitytree;
 
+import com.mojang.authlib.minecraft.client.MinecraftClient;
 import com.wynntils.core.WynntilsMod;
 import com.wynntils.core.components.Managers;
 import com.wynntils.core.components.Models;
@@ -16,14 +17,20 @@ import com.wynntils.models.containers.ContainerModel;
 import com.wynntils.utils.mc.McUtils;
 import com.wynntils.utils.wynn.ContainerUtils;
 import com.wynntils.utils.wynn.InventoryUtils;
+import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
+import it.unimi.dsi.fastutil.ints.Int2ObjectOpenHashMap;
 import net.minecraft.core.component.DataComponents;
+import net.minecraft.network.protocol.game.ServerboundContainerClickPacket;
+import net.minecraft.world.inventory.ClickType;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.Items;
 import net.minecraft.world.item.PotionItem;
 import net.minecraft.world.item.component.CustomModelData;
+import org.lwjgl.glfw.GLFW;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Consumer;
 
 public class AbilityTreeContainerQueries {
     private static final int ABILITY_TREE_SLOT = 9;
@@ -31,13 +38,14 @@ public class AbilityTreeContainerQueries {
     private static final int NEXT_PAGE_SLOT = 59;
     private static final int MAX_PAGE_COUNT = 7;
 
-    private final float[] UNLOCKABLE_CUSTOMDATA = {51f, 19f, 23f, 35f, 31f, 27f}; // Im gonna hold your balls when I say this but whne the customdata is one of these its unlockable
+    // In order of color from left to right: green, white, yellow, red, blue, pink
+    private final float[] UNLOCKABLE_CUSTOMDATA = {51f, 19f, 23f, 35f, 31f, 27f};
     private final float[] SELECTED_CUSTOMDATA = {52f, 20f, 24f, 36f, 32f, 28f};
 
     private int pageCount;
 
     // Callback needed so the ability tree menu can open properly
-    public void saveAbilityTree(java.util.function.Consumer<List<AbilityTreeNode>> callback) {
+    public void saveAbilityTree(Consumer<List<AbilityTreeNode>> callback) {
         ContainerUtils.closeBackgroundContainer();
 
         Managers.TickScheduler.scheduleNextTick(() -> queryAbilityTree(
@@ -90,7 +98,22 @@ public class AbilityTreeContainerQueries {
 
                                 if (isUnlockableNode(itemStack, slot, page)) {
                                     // Unlock the node
-                                    QueryStep.clickOnSlot(slot); // Or collect the click step to build into query
+//                                    System.out.println(String.format("slot:%d, page:%d", slot, page));
+//                                    QueryStep.clickOnSlot(slot); // Or collect the click step to build into query
+
+//                                    ContainerUtils.clickOnSlot(slot, content.containerId(), GLFW.GLFW_MOUSE_BUTTON_LEFT, content.items());
+//
+//                                    Int2ObjectMap<ItemStack> changedSlots = new Int2ObjectOpenHashMap<>();
+//                                    changedSlots.put(slot, new ItemStack(Items.AIR));
+//                                    McUtils.sendPacket(new ServerboundContainerClickPacket(McUtils.inventoryMenu().containerId, McUtils.inventoryMenu().getStateId(), slot, 0, ClickType.PICKUP, ItemStack.EMPTY, changedSlots));
+
+//                                    McUtils.mc().gameMode.handleInventoryMouseClick(0, slot, 0, ClickType.PICKUP, McUtils.player());
+
+//                                    ContainerUtils.clickOnSlot(
+//                                            slot,
+//                                            content.containerId(),
+//                                            GLFW.GLFW_MOUSE_BUTTON_RIGHT,
+//                                            content.items());
 
                                     unlockedAny = true;
                                     break; // break early to force a container refresh and get the new state
