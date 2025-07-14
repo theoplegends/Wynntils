@@ -10,6 +10,7 @@ import com.wynntils.screens.abilityloadouts.widgets.AbilityLoadoutWidget;
 import com.wynntils.screens.base.WynntilsGridLayoutScreen;
 import com.wynntils.screens.base.widgets.TextInputBoxWidget;
 import com.wynntils.utils.type.Pair;
+import com.wynntils.utils.wynn.ContainerUtils;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.AbstractWidget;
@@ -43,6 +44,7 @@ public final class AbilityLoadoutsScreen extends WynntilsGridLayoutScreen {
     @Override
     protected void doInit() {
         super.doInit();
+        ContainerUtils.closeBackgroundContainer();
         populateLoadouts();
 
         saveNameInput = new TextInputBoxWidget(
