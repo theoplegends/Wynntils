@@ -1,5 +1,5 @@
 /*
- * Copyright © Wynntils 2023-2024.
+ * Copyright © Wynntils 2023-2025.
  * This file is released under LGPLv3. See LICENSE for full license details.
  */
 package com.wynntils.handlers.tooltip.impl.identifiable.components;
@@ -20,6 +20,7 @@ import com.wynntils.models.gear.type.GearRequirements;
 import com.wynntils.models.gear.type.GearRestrictions;
 import com.wynntils.models.gear.type.GearTier;
 import com.wynntils.models.stats.type.DamageType;
+import com.wynntils.models.stats.type.ShinyStat;
 import com.wynntils.utils.StringUtils;
 import com.wynntils.utils.mc.RenderedStringUtils;
 import com.wynntils.utils.type.Pair;
@@ -66,7 +67,9 @@ public final class GearTooltipComponent extends IdentifiableTooltipComponent<Gea
             List<Pair<DamageType, RangedValue>> damages = gearInfo.fixedStats().damages();
             for (Pair<DamageType, RangedValue> damageStat : damages) {
                 DamageType type = damageStat.key();
-                MutableComponent damage = Component.literal(type.getSymbol() + " " + type.getDisplayName())
+                String elementSymbol =
+                        type.getElement().isPresent() ? type.getElement().get().getDisplaySymbol() : type.getSymbol();
+                MutableComponent damage = Component.literal(elementSymbol + " " + type.getDisplayName())
                         .withStyle(type.getColorCode());
                 damage.append(Component.literal("Damage: " + damageStat.value().asString())
                         .withStyle(
@@ -92,7 +95,8 @@ public final class GearTooltipComponent extends IdentifiableTooltipComponent<Gea
             List<Pair<Element, Integer>> defenses = gearInfo.fixedStats().defences();
             for (Pair<Element, Integer> defenceStat : defenses) {
                 Element element = defenceStat.key();
-                MutableComponent defense = Component.literal(element.getSymbol() + " " + element.getDisplayName())
+                MutableComponent defense = Component.literal(
+                                element.getDisplaySymbol() + " " + element.getDisplayName())
                         .withStyle(element.getColorCode());
                 defense.append(Component.literal(" Defence: " + StringUtils.toSignedString(defenceStat.value()))
                         .withStyle(ChatFormatting.GRAY));
@@ -139,12 +143,21 @@ public final class GearTooltipComponent extends IdentifiableTooltipComponent<Gea
         }
 
         if (gearInstance != null && gearInstance.shinyStat().isPresent()) {
-            header.add(Component.literal(
-                            "⬡ " + gearInstance.shinyStat().get().statType().displayName() + ": ")
-                    .withStyle(ChatFormatting.GRAY)
-                    .append(Component.literal(String.valueOf(
-                                    gearInstance.shinyStat().get().value()))
-                            .withStyle(ChatFormatting.WHITE)));
+            ShinyStat shinyStat = gearInstance.shinyStat().get();
+            if (shinyStat.shinyRerolls() == 0) {
+                header.add(Component.literal("⬡ " + shinyStat.statType().displayName() + ": ")
+                        .withStyle(ChatFormatting.GRAY)
+                        .append(Component.literal(String.valueOf(shinyStat.value()))
+                                .withStyle(ChatFormatting.WHITE)));
+            } else {
+                header.add(Component.literal("⬡ " + shinyStat.statType().displayName() + ": ")
+                        .withStyle(ChatFormatting.GRAY)
+                        .append(Component.literal(String.valueOf(shinyStat.value()))
+                                .withStyle(ChatFormatting.WHITE))
+                        .append(Component.literal(" [" + shinyStat.shinyRerolls() + "]")
+                                .withStyle(ChatFormatting.DARK_GRAY)));
+            }
+
             header.add(Component.literal(""));
         }
 
